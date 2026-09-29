@@ -1,0 +1,55 @@
+# The loans landing page, as a container beside the main site.
+#
+#   docker compose up -d --build
+#
+# It joins the same Docker network as the reverse proxy that already serves
+# finmeyo.com, under the alias `finmeyo-loans`, so that proxy can send
+# loan.finmeyo.com to http://finmeyo-loans:3100.
+#
+# Set PROXY_NETWORK in .env to that network's name. Find it with:
+#   docker inspect <proxy-container> --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+
+services:
+  loans:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # NEXT_PUBLIC_* are inlined at build time, so they are build args rather
+      # than environment variables. Setting them only under `environment`
+      # would leave the built page pointing at the defaults and nothing would
+      # say so — the page would just post its leads to the wrong host.
+      args:
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-https://finmeyo.com}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://loan.finmeyo.com}
+        NEXT_PUBLIC_COOKIE_DOMAIN: ${NEXT_PUBLIC_COOKIE_DOMAIN:-.finmeyo.com}
+    image: finmeyo-loans
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '3100'
+      # Read at request time by the server-side fetches in src/lib/api.ts.
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-https://finmeyo.com}
+    ports:
+      # Loopback only. The proxy reaches this over the shared network below;
+      # nothing off-box needs the port.
+      - '${WEB_BIND:-127.0.0.1}:${WEB_PORT:-3100}:3100'
+    networks:
+      default: {}
+      shared-proxy:
+        aliases:
+          - finmeyo-loans
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3100/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+networks:
+  shared-proxy:
+    external: true
+    name: ${PROXY_NETWORK:?set PROXY_NETWORK to the network the reverse proxy is on}

@@ -1,0 +1,17 @@
+# Add this to the Caddyfile that already serves finmeyo.com, then reload:
+#
+#   docker exec <caddy-container> caddy reload --config /etc/caddy/Caddyfile
+#
+# `finmeyo-loans` is the alias docker-compose.yml gives this container on the
+# proxy's network, so Caddy reaches it container-to-container — no host port
+# involved, which matters because the container publishes on 127.0.0.1 only
+# and another container cannot reach the host's loopback.
+#
+# TLS is automatic, but the DNS record has to exist first: point an A record
+# for loan.finmeyo.com at this server before reloading, or the certificate
+# request fails and the site serves a warning.
+
+loan.finmeyo.com {
+	encode zstd gzip
+	reverse_proxy finmeyo-loans:3100
+}
