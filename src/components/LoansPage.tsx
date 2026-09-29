@@ -268,10 +268,14 @@ export function LoansPage({ content, contact, lenderNames, rates, gaId, gtmId }:
               <h2>{content.faq.heading}</h2>
             </div>
             <div className="faq-grid">
+              {/* Read down the left column, then down the right. Dealing the
+                  questions out one to each side reads across, which puts the
+                  seventh question beside the first and breaks the order the
+                  copy was written in. */}
               {[0, 1].map((column) => (
                 <div key={column}>
                   {content.faq.items
-                    .filter((_, index) => index % 2 === column)
+                    .filter((_, index) => (index < Math.ceil(content.faq.items.length / 2) ? 0 : 1) === column)
                     .map((item) => (
                       <details key={item.q}>
                         <summary>{item.q}</summary>

@@ -391,3 +391,15 @@ html:has(.lp-root){--head:64px;scroll-behavior:smooth;scroll-snap-type:y proximi
 }
 /* Above the mobile action bar, not behind it. */
 @media (max-width:760px){.lp-root .cookie{bottom:62px}}
+
+/* ---------------------------------------------------------------------------
+ * The body itself.
+ *
+ * The original stylesheet's `body{margin:0}` was scoped under .lp-root along
+ * with everything else, which left <body> — the one element the scope cannot
+ * reach — carrying the browser's default 8px margin. That put a white strip
+ * down both edges of the page and made it 16px taller and 16px narrower than
+ * the design. Found by comparing the two at the same viewport; the width came
+ * out 1264 against 1280.
+ * ------------------------------------------------------------------------ */
+body:has(.lp-root){margin:0;background:var(--paper,#FBFBF8)}

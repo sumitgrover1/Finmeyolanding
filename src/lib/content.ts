@@ -211,7 +211,7 @@ export const SHIPPED_LOANS: LoansContent = {
 
   explorer: {
     heading: 'Business loan, home loan, LAP and personal loan in Gurgaon',
-    fine: '*Starting rates are what our partner lenders quote a strong profile today. Final rate, amount and terms are set by the lender.',
+    fine: '*Starting rates are indicative for strong CIBIL scores and income. Final rate, amount and terms are set by the lender.',
     products: [
       {
         key: 'business',
