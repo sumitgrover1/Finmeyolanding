@@ -4,15 +4,21 @@
  * There is no database here, and that is the point of this repository: it can
  * be handed to somebody outside the business without handing them the customer
  * records, the lender rules or the console. What it needs instead it asks the
- * main site for, on endpoints that are public by design —
+ * main site for —
  *
  *   GET  /api/rates        what each loan costs at each credit band
- *   GET  /api/site-config  the phone number, and the analytics id
+ *   GET  /api/site-config  the phone number, the address, the analytics id
  *   POST /api/capture      a lead, into the same queue as every other lead
  *
- * The main site allows this origin explicitly (its LANDING_ORIGINS), so the
- * POST is an ordinary cross-origin request from the browser and the two reads
- * are plain server-side fetches.
+ * All three are called **from this app's server**, never from the browser.
+ * /api/rates is behind a key and /api/capture believes a relayed visitor
+ * address and campaign only from a key, and a key shipped to a browser is not
+ * a key — anything that reaches a browser is public by the time it arrives.
+ * The lead POST therefore goes through this app's own /api/lead, which holds
+ * the key and forwards.
+ *
+ * The key is `LANDING_API_KEY`, and it lives in the environment on the server,
+ * never in this repository. Somebody with the code still has no key.
  */
 
 /** Set per environment. The default is production, which is where it runs. */
@@ -82,9 +88,16 @@ export interface SiteConfig {
  * API was slow costs the click and, repeated, the ad account's quality score —
  * so every caller here renders without the data instead.
  */
-async function read<T>(path: string, revalidate: number): Promise<T | null> {
+async function read<T>(path: string, revalidate: number, key = false): Promise<T | null> {
+  const secret = process.env.LANDING_API_KEY ?? '';
+  if (key && secret.length < 32) {
+    console.error(`[api] LANDING_API_KEY is not set; ${path} cannot be read`);
+    return null;
+  }
+
   try {
     const response = await fetch(`${API_BASE}${path}`, {
+      headers: key ? { Authorization: `Bearer ${secret}` } : undefined,
       // Cached and revalidated rather than fetched per visitor: these change
       // when somebody edits the console, not between two page views.
       next: { revalidate },
@@ -102,7 +115,7 @@ async function read<T>(path: string, revalidate: number): Promise<T | null> {
 }
 
 export function fetchRates() {
-  return read<RateMatrix>('/api/rates', 300);
+  return read<RateMatrix>('/api/rates', 300, true);
 }
 
 export async function fetchConfig(): Promise<SiteConfig> {

@@ -28,31 +28,37 @@ step "Fetching the latest code"
 git pull --ff-only
 
 # ---------------------------------------------------------------------------
-# The main site has to allow this origin before the page can post a lead.
-# Checked here rather than discovered by a visitor whose form silently failed:
-# a browser refuses a cross-origin POST with no matching header, and the only
-# sign is an error in a console nobody is watching.
+# The key has to work before anything else is worth doing. Checked here rather
+# than discovered by a visitor whose form silently failed: a wrong key shows up
+# as a page with no rates and a form that returns an error, and the only other
+# sign is a line in a log nobody is watching.
 # ---------------------------------------------------------------------------
-step "Checking the main site allows this origin"
-allow="$(curl -fsS -o /dev/null -w '%{http_code}' \
-  -X OPTIONS "$API_BASE/api/capture" \
-  -H "Origin: $SITE_URL" \
-  -H 'Access-Control-Request-Method: POST' || echo 000)"
-if [[ "$allow" == "204" ]]; then
-  printf '    %s allows %s\n' "$API_BASE" "$SITE_URL"
-else
-  fail "$API_BASE did not allow $SITE_URL (preflight returned $allow)."
+step "Checking the key the main site expects"
+KEY="$(read_env LANDING_API_KEY)"
+if [[ -z "$KEY" ]]; then
+  fail "LANDING_API_KEY is not set in .env."
   cat <<MSG
 
-  On the main site, add this origin to LANDING_ORIGINS in .env.production and
-  restart it:
+  Generate one:
 
-      LANDING_ORIGINS=$SITE_URL
+      openssl rand -hex 32
 
-  Deploying without it builds a page whose form cannot submit.
+  Put the SAME value in this .env and in the main site's .env.production as
+  LANDING_API_KEY, then restart the main site.
 MSG
   exit 1
 fi
+
+# No -f: it exits non-zero on a 401, and then the || below would report 000
+# and the "rejected the key" branch could never be reached.
+code="$(curl -sS -o /dev/null -w '%{http_code}' "$API_BASE/api/rates" \
+  -H "Authorization: Bearer $KEY" || echo 000)"
+case "$code" in
+  200) printf '    %s accepts our key\n' "$API_BASE" ;;
+  401) fail "$API_BASE rejected the key. It must be identical on both sides."; exit 1 ;;
+  000) fail "$API_BASE could not be reached from this server."; exit 1 ;;
+  *)   fail "$API_BASE/api/rates returned $code."; exit 1 ;;
+esac
 
 step "Building and restarting"
 docker compose up -d --build

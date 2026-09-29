@@ -29,6 +29,10 @@ services:
       PORT: '3100'
       # Read at request time by the server-side fetches in src/lib/api.ts.
       NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-https://finmeyo.com}
+      # The key the main site checks. An environment variable, never a build
+      # arg: a build arg is baked into the image and readable by anyone who
+      # can pull it. This one is read on the server, per request.
+      LANDING_API_KEY: ${LANDING_API_KEY:?set LANDING_API_KEY — the same value as on the main site}
     ports:
       # Loopback only. The proxy reaches this over the shared network below;
       # nothing off-box needs the port.

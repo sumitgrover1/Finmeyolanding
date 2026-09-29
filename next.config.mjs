@@ -5,25 +5,16 @@
  * site rather than to a platform that runs `next start` for you.
  */
 
-/**
- * Where the rates come from and where the leads go.
- *
- * This app has no database. Everything it needs from the business it asks the
- * main site for, over HTTPS, on endpoints that are public by design. That is
- * the whole reason this repository can be handed to somebody: there is nothing
- * in it to leak.
- */
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://finmeyo.com';
 const ANALYTICS = ['https://www.googletagmanager.com', 'https://*.google-analytics.com'];
 
 /**
  * Content Security Policy.
  *
  * connect-src is the interesting line here: the browser may talk to this
- * origin, to the main site's API, and to Google's analytics collector. Nothing
- * else. A script injected into this page could not post the form's contents
- * anywhere, which on a page that collects names and phone numbers is the
- * directive that matters most.
+ * origin and to Google's analytics collector, and nothing else — not even the
+ * main site, which this app reaches only from its own server. On a page that
+ * collects names and phone numbers, that is the directive that matters most:
+ * a script injected into it could not post what it read anywhere.
  *
  * script-src carries 'unsafe-inline' for the same reason the main site's does:
  * the alternative is a per-request nonce, and a nonce makes the page dynamic.
@@ -35,7 +26,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self' data:",
-  `connect-src 'self' ${API_BASE} ${ANALYTICS.join(' ')}`,
+  `connect-src 'self' ${ANALYTICS.join(' ')}`,
   "form-action 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { track } from '@/lib/track';
 import { UTM_KEYS } from '@/lib/attribution';
-import { API_BASE } from '@/lib/api';
 import { loanOptions, productOfLoan, type LoansContent } from '@/lib/content';
 
 /**
@@ -14,11 +13,12 @@ import { loanOptions, productOfLoan, type LoansContent } from '@/lib/content';
  * the page, and asking for a phone number after that costs fewer of them than
  * asking for it first.
  *
- * It posts to the main site's /api/capture — the same endpoint every other
- * capture form posts to — so a lead from here lands in the same queue, under
- * the same consent record, with the same attribution, and reaches the desk the
- * same way. This page being on its own host and in its own repository changes
- * nothing about where its leads go.
+ * It posts to this app's own /api/lead, which forwards to the main site's
+ * /api/capture with a key — see that route for why the key cannot live in the
+ * browser. So a lead from here lands in the same queue, under the same consent
+ * record, with the same attribution, and reaches the desk the same way. This
+ * page being on its own host and in its own repository changes nothing about
+ * where its leads go.
  */
 
 interface Props {
@@ -133,14 +133,12 @@ export function LeadForm({ content, whatsapp, loan, onLoan, creditBand, onCredit
     const band = content.form.amounts.find((entry) => entry.label === amount);
 
     try {
-      const response = await fetch(`${API_BASE}/api/capture`, {
+      const response = await fetch('/api/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // The attribution cookie is written for .finmeyo.com and read by the
-        // main site server-side. Without this the browser would leave it out
-        // of a cross-origin request and every paid lead would file as direct
-        // — the one number this page exists to produce.
-        credentials: 'include',
+        // Same origin, so the attribution cookie goes with it by default and
+        // our own server can read it and relay it onward.
+        credentials: 'same-origin',
         body: JSON.stringify({
           product,
           // The sub-product in the visitor's words, which `product` cannot

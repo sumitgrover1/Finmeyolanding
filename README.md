@@ -8,12 +8,12 @@ shapes everything else in here.
 
 ## This repository holds nothing worth stealing
 
-There is **no database connection, no session secret and no API key** in this
-app, and there should never be one. The main site holds the console, the lender
-rules and the customer records — names, mobile numbers, PAN-verified names,
-income, uploaded bank statements. That is data the DPDP Act makes us
-responsible for, and the point of splitting this page out is that somebody can
-work on it, run it locally and deploy it without ever being near any of that.
+There is **no database connection here and no session secret**, and there
+should never be one. The main site holds the console, the lender rules and the
+customer records — names, mobile numbers, PAN-verified names, income, uploaded
+bank statements. That is data the DPDP Act makes us responsible for, and the
+point of splitting this page out is that somebody can work on it, run it
+locally and deploy it without ever being near any of that.
 
 What this app needs from the business, it asks for over HTTPS:
 
@@ -23,13 +23,38 @@ What this app needs from the business, it asks for over HTTPS:
 | `GET /api/site-config` | the phone number, address and analytics id |
 | `POST /api/capture` | a lead — into the same queue as every other lead |
 
-All three are public endpoints on the main site: nothing they return is
-confidential, and the first two are the same figures already printed on
-finmeyo.com/lenders. See `src/lib/api.ts`.
+See `src/lib/api.ts`.
 
-**If you find yourself adding a credential here, stop.** It means something
-this page needs is not available through a public endpoint, and the answer is a
-new endpoint on the main site, not a secret in this repository.
+### The one secret, and where it is not
+
+`LANDING_API_KEY` is a shared secret between this app's **server** and the main
+site. The main site will not serve the rate table without it, and will not
+believe this server about a visitor's IP address or which advertisement brought
+them without it.
+
+It lives in `.env` on the server. **It is not in this repository and must never
+be committed** — `.gitignore` keeps `.env` out, and `.env.example` carries an
+empty placeholder. Somebody with the code still has no key.
+
+It is also never sent to a browser. That is why the form posts to this app's
+own `/api/lead` rather than to the main site directly: the route holds the key
+and forwards. A key shipped to a browser is not a key — anything that reaches a
+browser is public by the time it arrives, and can be read out of the network
+tab and replayed.
+
+What the key does **not** do: stop somebody posting a lead to the main site by
+hand. `/api/capture` also serves the main site's own public forms, which run in
+visitors' browsers and can carry no secret, so it has to stay reachable. It
+requires either a key or an `Origin` header from a page of the site, and it
+throttles per address — that stops another site posting from a visitor's
+browser and stops drive-by scripts, but a determined person with curl can still
+submit a form, exactly as they could fill it in by hand. If junk leads ever
+become a real problem, the answer is a challenge on the form, not a longer key.
+
+**If you find yourself adding a second credential here, stop.** It means
+something this page needs is not reachable the way the others are, and the
+answer is a new endpoint on the main site, not another secret in this
+repository.
 
 ## Running it
 
@@ -45,11 +70,16 @@ npm run dev                    # http://localhost:3100
 NEXT_PUBLIC_API_BASE=https://finmeyo.com
 NEXT_PUBLIC_SITE_URL=http://localhost:3100
 NEXT_PUBLIC_COOKIE_DOMAIN=
+LANDING_API_KEY=<ask for one>
 ```
 
 Leave the cookie domain empty locally — a `localhost` page cannot write a
-cookie for `.finmeyo.com`, and the form still works without it (the lead is
-simply recorded as "direct").
+cookie for `.finmeyo.com`, and the form still works without it.
+
+Without a key the page still renders: the layout, the copy and the calculators
+all work, the rate section says it could not load today's range, and the form
+returns an error instead of submitting. That is deliberate, so the page can be
+worked on without one.
 
 Pointing `NEXT_PUBLIC_API_BASE` at production from a laptop is fine for
 reading rates. **Submitting the form will create a real lead** and ring the
@@ -101,11 +131,17 @@ to that file and nothing else.
 
 ### Leads
 
-The form posts to the main site's `/api/capture` with `credentials: 'include'`,
-so the attribution cookie goes with it and a lead from a paid click is recorded
-against that campaign rather than as "direct". That cookie is written for
-`.finmeyo.com` — both hosts share it, which is what `NEXT_PUBLIC_COOKIE_DOMAIN`
-is for.
+The form posts to this app's own `/api/lead`, same-origin. That route runs on
+the server, adds the key, and forwards to the main site's `/api/capture` along
+with two things only it can know:
+
+- **the visitor's IP address**, so the main site throttles and records the
+  person rather than this container — otherwise every lead in Gurgaon looks
+  like one very busy machine;
+- **the attribution cookie** the browser sent us, which is what says which
+  advertisement produced the enquiry.
+
+The main site validates both and only believes them because of the key.
 
 A loan against property is filed as a home loan, because the main system prices
 three products and LAP is not one of them. The sub-product the visitor actually
@@ -117,10 +153,10 @@ commercial property" and not just "home loan".
 A container beside the main site, behind the same reverse proxy.
 
 1. Point an **A record** for `loan.finmeyo.com` at the server.
-2. On the **main site**, allow this origin and share the cookie — in its
-   `.env.production`:
+2. Generate the shared key — `openssl rand -hex 32` — and set the **same
+   value** on both sides. On the **main site**, in its `.env.production`:
    ```
-   LANDING_ORIGINS=https://loan.finmeyo.com
+   LANDING_API_KEY=<the key>
    NEXT_PUBLIC_COOKIE_DOMAIN=.finmeyo.com
    LOANS_SITE_URL=https://loan.finmeyo.com
    ```
@@ -130,8 +166,15 @@ A container beside the main site, behind the same reverse proxy.
 4. Add `Caddyfile.snippet` to the proxy's Caddyfile.
 5. `./deploy.sh`
 
-`deploy.sh` checks step 2 before it builds, so a missed origin fails the deploy
-instead of producing a page whose form silently does nothing.
+`deploy.sh` calls the main site with the key before it builds, so a wrong or
+missing key fails the deploy instead of producing a page whose form silently
+does nothing.
+
+### Rotating the key
+
+The main site accepts a comma-separated list, so there is no window where one
+side is broken: add the new key alongside the old one there, deploy the main
+site, change this one, deploy here, then remove the old one from the main site.
 
 `finmeyo.com/loans` permanently redirects here.
 
@@ -139,5 +182,9 @@ instead of producing a page whose form silently does nothing.
 
 Add them as a collaborator on this repository. They get the page, the copy and
 the design — and no route to the customer database, the console or the server.
+The key is not in here; if they need to run the page against live rates, issue
+them a second key (the main site takes a list) so it can be revoked on its own
+without touching the deployment.
+
 If they need to see leads, that is an account on the main site's console with
 whatever role fits, which is a separate decision from this repository.
