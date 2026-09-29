@@ -157,10 +157,13 @@ A container beside the main site, behind the same reverse proxy.
    value** on both sides. On the **main site**, in its `.env.production`:
    ```
    LANDING_API_KEY=<the key>
-   NEXT_PUBLIC_COOKIE_DOMAIN=.finmeyo.com
    LOANS_SITE_URL=https://loan.finmeyo.com
    ```
    then redeploy it. Until this is done the form here cannot submit.
+
+   (There is no cookie-domain setting to change on the main site. This
+   server reads the visitor's attribution cookie from the request it receives
+   and relays it, so the two hosts do not need to share one.)
 3. Clone this repository on the server, copy `.env.production.example` to
    `.env` and set `PROXY_NETWORK` to the Docker network the proxy is on.
 4. Add `Caddyfile.snippet` to the proxy's Caddyfile.
