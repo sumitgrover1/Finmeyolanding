@@ -1,3 +1,8 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 /**
  * The loans landing page.
  *
@@ -36,6 +41,13 @@ const csp = [
 /** @type {import('next').NextConfig} */
 export default {
   output: 'standalone',
+  // Pin the project root instead of letting Next infer it from the nearest
+  // lockfile. Inferred, a lockfile in any parent directory moves the root up
+  // and nests the server at .next/standalone/<dir>/server.js, and the
+  // Dockerfile's CMD ["node", "server.js"] then finds nothing to run. It
+  // happened in testing, from a stray lockfile two directories up.
+  outputFileTracingRoot: __dirname,
+  turbopack: { root: __dirname },
   poweredByHeader: false,
   reactStrictMode: true,
   async headers() {
