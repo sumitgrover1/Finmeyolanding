@@ -1,8 +1,7 @@
-import type { Metadata } from 'next';
-import { SHIPPED_LOANS } from '@/lib/content';
-import { fetchConfig, fetchRates } from '@/lib/api';
-import { SITE_NAME, SITE_URL } from '@/lib/site';
-import { LoansPage } from '@/components/LoansPage';
+import type { Metadata } from "next";
+import { fetchConfig, fetchContent, fetchRates } from "@/lib/api";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { LoansPage } from "@/components/LoansPage";
 
 /**
  * loan.finmeyo.com — the Gurgaon loans landing page.
@@ -14,43 +13,49 @@ import { LoansPage } from '@/components/LoansPage';
  * endpoints — see src/lib/api.ts.
  *
  * Revalidated rather than rendered per request. This sits behind paid traffic,
- * where the first paint is what the money buys, and being a few minutes behind
- * a repriced lender is fine.
+ * where the first paint is what the money buys, and being a minute behind the
+ * console is fine. The copy, the rates and the contact details are all cached
+ * reads of the main site.
  */
-export const revalidate = 300;
+export const revalidate = 60;
 
-const content = SHIPPED_LOANS;
-
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: `${content.meta.title} | ${SITE_NAME}`,
-  description: content.meta.description,
-  keywords: content.meta.keywords,
-  alternates: { canonical: '/' },
-  robots: { index: true, follow: true },
-  openGraph: {
-    type: 'website',
-    locale: 'en_IN',
-    url: SITE_URL,
-    siteName: SITE_NAME,
-    title: content.meta.ogTitle,
-    description: content.meta.ogDescription,
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: content.meta.ogTitle,
-    description: content.meta.ogDescription,
-  },
-  other: {
-    'geo.region': content.meta.geoRegion,
-    'geo.placename': content.meta.geoPlace,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await fetchContent();
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: `${content.meta.title} | ${SITE_NAME}`,
+    description: content.meta.description,
+    keywords: content.meta.keywords,
+    alternates: { canonical: "/" },
+    robots: { index: content.meta.noindex !== true, follow: true },
+    openGraph: {
+      type: "website",
+      locale: "en_IN",
+      url: SITE_URL,
+      siteName: SITE_NAME,
+      title: content.meta.ogTitle,
+      description: content.meta.ogDescription,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: content.meta.ogTitle,
+      description: content.meta.ogDescription,
+    },
+    other: {
+      "geo.region": content.meta.geoRegion,
+      "geo.placename": content.meta.geoPlace,
+    },
+  };
+}
 
 export default async function Page() {
   // Both reads fail soft: a landing page that 500s because an API was slow
   // costs the click and, repeated, the ad account's quality score.
-  const [rates, config] = await Promise.all([fetchRates(), fetchConfig()]);
+  const [content, rates, config] = await Promise.all([
+    fetchContent(),
+    fetchRates(),
+    fetchConfig(),
+  ]);
 
   /**
    * Structured data, built from the same objects the page renders.
@@ -60,11 +65,11 @@ export default async function Page() {
    * structured-data error that gets a site penalised rather than ignored.
    */
   const jsonLd = {
-    '@context': 'https://schema.org',
-    '@graph': [
+    "@context": "https://schema.org",
+    "@graph": [
       {
-        '@type': ['FinancialService', 'LocalBusiness'],
-        '@id': `${SITE_URL}/#organisation`,
+        "@type": ["FinancialService", "LocalBusiness"],
+        "@id": `${SITE_URL}/#organisation`,
         name: config.contact.legalName,
         url: SITE_URL,
         telephone: config.contact.phone,
@@ -74,27 +79,27 @@ export default async function Page() {
           .map((area) => area.name)
           .slice(0, 30),
         address: {
-          '@type': 'PostalAddress',
+          "@type": "PostalAddress",
           streetAddress: config.contact.addressLine1,
           addressLocality: content.meta.geoPlace,
-          addressRegion: 'Haryana',
-          addressCountry: 'IN',
+          addressRegion: "Haryana",
+          addressCountry: "IN",
         },
       },
       {
-        '@type': 'WebPage',
-        '@id': `${SITE_URL}/`,
+        "@type": "WebPage",
+        "@id": `${SITE_URL}/`,
         url: `${SITE_URL}/`,
         name: content.meta.title,
         description: content.meta.description,
-        isPartOf: { '@id': `${SITE_URL}/#organisation` },
+        isPartOf: { "@id": `${SITE_URL}/#organisation` },
       },
       {
-        '@type': 'FAQPage',
+        "@type": "FAQPage",
         mainEntity: content.faq.items.map((item) => ({
-          '@type': 'Question',
+          "@type": "Question",
           name: item.q,
-          acceptedAnswer: { '@type': 'Answer', text: item.a },
+          acceptedAnswer: { "@type": "Answer", text: item.a },
         })),
       },
     ],
@@ -104,7 +109,9 @@ export default async function Page() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
       />
       <LoansPage
         content={content}

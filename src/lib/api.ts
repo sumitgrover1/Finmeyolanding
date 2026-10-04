@@ -21,6 +21,8 @@
  * never in this repository. Somebody with the code still has no key.
  */
 
+import { mergeContent, type LoansContent } from './content';
+
 /** Set per environment. The default is production, which is where it runs. */
 export const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'https://finmeyo.com').replace(/\/$/, '');
 
@@ -112,6 +114,20 @@ async function read<T>(path: string, revalidate: number, key = false): Promise<T
     console.error(`[api] could not read ${path}`, error);
     return null;
   }
+}
+
+/**
+ * The page's copy, from the console.
+ *
+ * Cached for a minute, so an edit is live within about that and the main site is
+ * asked once a minute at most however much traffic an advertisement sends.
+ * Falls back to the copy shipped in this repository when the main site cannot be
+ * reached or answers with nothing usable — the page it served before the console
+ * could edit it, never a blank one.
+ */
+export async function fetchContent(): Promise<LoansContent> {
+  const response = await read<{ content?: unknown }>('/api/landing-content', 60, true);
+  return mergeContent(response?.content);
 }
 
 export function fetchRates() {

@@ -14,7 +14,7 @@
  *      property — which the main system has no product for — lands somewhere
  *      deliberate rather than wherever a fallback happened to put it.
  */
-import { SHIPPED_LOANS, headingRuns, loanOptions, productOfLoan } from '../src/lib/content';
+import { SHIPPED_LOANS, headingRuns, loanOptions, mergeContent, productOfLoan } from '../src/lib/content';
 
 let failures = 0;
 function check(what: string, got: unknown, want: unknown) {
@@ -128,6 +128,27 @@ assert(
   'the lede names the same range the grid renders',
   content.areas.lede.includes(`Sector ${sectors?.from}`) && content.areas.lede.includes(`Sector ${sectors?.to}`),
 );
+
+// --- 4. what the main site sends can never blank the page ---
+
+check('nothing received is the shipped page', mergeContent(undefined), SHIPPED_LOANS);
+check('a non-object is the shipped page', mergeContent('oops'), SHIPPED_LOANS);
+check('an array is the shipped page', mergeContent([1, 2]), SHIPPED_LOANS);
+check('the shipped page passes through unchanged', mergeContent(JSON.parse(JSON.stringify(SHIPPED_LOANS))), SHIPPED_LOANS);
+
+const received = JSON.parse(JSON.stringify(SHIPPED_LOANS));
+received.hero.heading = 'Edited in the console';
+received.faq = 'broken';
+received.areas = { heading: 'x', groups: [] };
+received.explorer = { products: [] };
+received.form = null;
+const merged = mergeContent(received);
+check('an edited section is taken', merged.hero.heading, 'Edited in the console');
+check('a broken FAQ falls back', merged.faq, SHIPPED_LOANS.faq);
+check('an empty area list falls back', merged.areas, SHIPPED_LOANS.areas);
+check('an explorer with no loans falls back', merged.explorer, SHIPPED_LOANS.explorer);
+check('a missing form falls back', merged.form, SHIPPED_LOANS.form);
+check('the sections that were fine are kept', merged.footer, SHIPPED_LOANS.footer);
 
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed.`);

@@ -100,7 +100,7 @@ something else, so splitting it into islands would buy nothing.
 
 | | |
 |---|---|
-| `src/lib/content.ts` | every word on the page, as one typed object |
+| `src/lib/content.ts` | the page's copy as one typed object — the fallback; the live copy comes from the main site |
 | `src/lib/api.ts` | the three calls to the main site, and what to do when they fail |
 | `src/lib/rates.ts` | picking the right row out of the rate table |
 | `src/app/loans.css` | the whole design, scoped under `.lp-root` |
@@ -123,9 +123,17 @@ be reached.
 
 ### The copy
 
+The copy is edited in the main site's console (**Content → Loans landing**) and
+read from `GET /api/landing-content` with the same key as the rates. It is
+cached for a minute and the page revalidates every minute, so an edit is live in
+about one to two minutes with no deploy. The same screen has a noindex switch,
+for if this page ends up competing with `/loans/gurugram` on the main site.
+
 `src/lib/content.ts` is the whole page in one object — headings, FAQ answers,
-the area lists, the documents each product needs. Changing wording is a change
-to that file and nothing else.
+the area lists, the documents each product needs — and it is the **floor**: what
+the page shows if the main site cannot be reached or sends a section that is not
+the shape the components read (`mergeContent`). Changing wording there changes
+only that fallback.
 
 `*asterisks*` in a heading mark the words the design sets in gold.
 

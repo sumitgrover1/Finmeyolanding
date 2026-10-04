@@ -84,6 +84,8 @@ export interface LoansContent {
     /** Indian state code and place, which local search reads. */
     geoRegion: string;
     geoPlace: string;
+    /** Keep the page out of search results — for when it competes with a page on the main site. */
+    noindex?: boolean;
   };
   nav: { label: string; href: string }[];
   hero: {
@@ -584,6 +586,48 @@ export const SHIPPED_LOANS: LoansContent = {
       'We are not a bank or an NBFC and we do not lend money. Loan approval, the final interest rate, the sanctioned amount and all terms are decided solely by the lender after its own credit appraisal. Rates and eligibility shown are indicative. We never charge customers any advance, processing or file-opening fee.',
   },
 };
+
+/**
+ * What the main site sent, made safe to render.
+ *
+ * The main site validates and normalises before it stores and before it serves,
+ * so this is not a second parser — it is the check that a response which should
+ * never be malformed, being the one thing between a visitor and a blank page,
+ * still cannot blank it. Section by section: one that is not the shape the
+ * components read is replaced by the shipped one, and the rest of the page is
+ * kept. Anything that is not an object at all gives the shipped page.
+ */
+export function mergeContent(raw: unknown): LoansContent {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return SHIPPED_LOANS;
+  const given = raw as Record<string, unknown>;
+  const out = { ...SHIPPED_LOANS } as unknown as Record<string, unknown>;
+
+  const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+  const filled = (v: unknown) => Array.isArray(v) && v.length > 0;
+
+  const sound: Record<Exclude<keyof LoansContent, 'nav'>, (v: Record<string, unknown>) => boolean> = {
+    meta: (v) => typeof v.title === 'string' && typeof v.description === 'string' && Array.isArray(v.keywords),
+    hero: (v) => typeof v.heading === 'string' && Array.isArray(v.ticks) && Array.isArray(v.pills),
+    form: (v) => filled(v.amounts) && filled(v.cities) && filled(v.employments),
+    finder: (v) => typeof v.heading === 'string',
+    explorer: (v) => filled(v.products),
+    how: (v) => Array.isArray(v.steps) && Array.isArray(v.bank) && Array.isArray(v.us),
+    about: (v) => Array.isArray(v.cards),
+    calculators: (v) => typeof v.heading === 'string',
+    lenders: (v) => typeof v.heading === 'string',
+    areas: (v) => filled(v.groups),
+    faq: (v) => Array.isArray(v.items),
+    end: (v) => typeof v.heading === 'string',
+    footer: (v) => typeof v.disclaimer === 'string',
+  };
+
+  if (filled(given.nav)) out.nav = given.nav;
+  for (const key of Object.keys(sound) as (keyof typeof sound)[]) {
+    const value = given[key];
+    if (isObject(value) && sound[key](value)) out[key] = value;
+  }
+  return out as unknown as LoansContent;
+}
 
 /**
  * Splits a heading on its gold markers.
