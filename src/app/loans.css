@@ -44,6 +44,8 @@ html:has(.lp-root){--head:64px;scroll-behavior:smooth;scroll-snap-type:y proximi
 .lp-root h2{font-size:clamp(1.65rem,2.9vw,2.35rem);font-weight:800;max-width:none}
 @media (min-width:901px){.lp-root h2.one-line{max-width:none;white-space:nowrap;font-size:min(2.1rem,2.55vw)}}
 .lp-root h2 em,.lp-root h1 em{font-style:normal;color:var(--marigold)}
+/* Marigold on the cream rate-finder band is 1.8:1 — unreadable. The same hue, darkened until it is 4.5:1. */
+.lp-root .finder h2 em{color:#9A6100}
 .lp-root h3{font-size:1.3rem;font-weight:700}
 .lp-root h4{font-size:1.1rem;font-weight:700}
 .lp-root p{margin:0}
@@ -190,7 +192,7 @@ html:has(.lp-root){--head:64px;scroll-behavior:smooth;scroll-snap-type:y proximi
 .lp-root .ltab small{color:var(--ink-soft);font-size:.83rem}
 .lp-root .ltab[aria-selected="true"]{background:var(--teal);border-color:var(--teal)}
 .lp-root .ltab[aria-selected="true"] b{color:#fff}
-.lp-root .ltab[aria-selected="true"] small{color:var(--marigold)}
+.lp-root .ltab[aria-selected="true"] small{color:#F7B32B}
 .lp-root .ltab:hover:not([aria-selected="true"]){border-color:var(--teal-2)}
 .lp-root .panel{background:#fff;border:1.5px solid var(--line);border-radius:var(--r-lg);padding:clamp(1.3rem,2.6vw,2rem)}
 .lp-root .panel[hidden]{display:none}

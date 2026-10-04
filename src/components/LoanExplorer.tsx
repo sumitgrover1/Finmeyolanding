@@ -118,7 +118,7 @@ export function LoanExplorer({ content, rates, open, onOpen, onApply }: Props) {
           </div>
 
           <div>
-            <article className="panel" role="tabpanel" id={`p-${active.key}`} aria-labelledby={`t-${active.key}`}>
+            <div className="panel" role="tabpanel" id={`p-${active.key}`} aria-labelledby={`t-${active.key}`}>
               <h3>{active.heading}</h3>
               <p>{active.intro}</p>
 
@@ -162,7 +162,7 @@ export function LoanExplorer({ content, rates, open, onOpen, onApply }: Props) {
                   {`Apply for ${midSentence(activeSub.loanLabel)}`}
                 </button>
               </div>
-            </article>
+            </div>
 
             <p className="fine">{content.explorer.fine}</p>
           </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { fetchConfig, fetchContent, fetchRates } from "@/lib/api";
-import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { SITE_NAME, SITE_URL, fitDescription } from "@/lib/site";
 import { LoansPage } from "@/components/LoansPage";
 
 /**
@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(SITE_URL),
     title: `${content.meta.title} | ${SITE_NAME}`,
-    description: content.meta.description,
+    description: fitDescription(content.meta.description),
     keywords: content.meta.keywords,
     alternates: { canonical: "/" },
     robots: { index: content.meta.noindex !== true, follow: true },
@@ -34,12 +34,14 @@ export async function generateMetadata(): Promise<Metadata> {
       url: SITE_URL,
       siteName: SITE_NAME,
       title: content.meta.ogTitle,
-      description: content.meta.ogDescription,
+      description: fitDescription(content.meta.ogDescription),
+      images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: content.meta.ogTitle }],
     },
     twitter: {
       card: "summary_large_image",
       title: content.meta.ogTitle,
-      description: content.meta.ogDescription,
+      description: fitDescription(content.meta.ogDescription),
+      images: ["/opengraph-image"],
     },
     other: {
       "geo.region": content.meta.geoRegion,
