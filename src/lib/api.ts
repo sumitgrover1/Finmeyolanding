@@ -74,7 +74,7 @@ export const FALLBACK_CONTACT: Contact = {
   whatsappNumber: '918076629836',
   email: 'hello@finmeyo.com',
   addressLine1: '',
-  addressLine2: 'Gurugram, Haryana',
+  addressLine2: '',
 };
 
 export interface SiteConfig {

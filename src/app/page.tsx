@@ -78,13 +78,19 @@ export default async function Page() {
           .flatMap((group) => group.areas ?? [])
           .map((area) => area.name)
           .slice(0, 30),
-        address: {
-          "@type": "PostalAddress",
-          streetAddress: config.contact.addressLine1,
-          addressLocality: content.meta.geoPlace,
-          addressRegion: "Haryana",
-          addressCountry: "IN",
-        },
+        // Only with an office to name. Until there is one the page still says
+        // where it serves, through areaServed above.
+        ...(config.contact.addressLine1 || config.contact.addressLine2
+          ? {
+              address: {
+                "@type": "PostalAddress",
+                streetAddress: config.contact.addressLine1,
+                addressLocality: content.meta.geoPlace,
+                addressRegion: "Haryana",
+                addressCountry: "IN",
+              },
+            }
+          : {}),
       },
       {
         "@type": "WebPage",

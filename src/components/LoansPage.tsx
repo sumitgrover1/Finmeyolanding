@@ -84,6 +84,9 @@ function subscribeHash(onChange: () => void) {
 }
 
 export function LoansPage({ content, contact, lenderNames, rates, gaId, gtmId }: Props) {
+  // The office, when the console has one. Empty until then, and the footer
+  // sentence simply has no address in it.
+  const office = [contact.addressLine1, contact.addressLine2].filter(Boolean).join(', ');
   const [loan, setLoan] = useState('');
   const [creditBand, setCreditBand] = useState('');
   const [city, setCity] = useState(content.form.cities[0] ?? '');
@@ -314,7 +317,8 @@ export function LoansPage({ content, contact, lenderNames, rates, gaId, gtmId }:
                 </a>
               </div>
               <p>
-                <strong style={{ color: '#fff' }}>{contact.legalName}</strong>, {contact.addressLine2}.{' '}
+                <strong style={{ color: '#fff' }}>{contact.legalName}</strong>
+                {office ? `, ${office}` : ''}.{' '}
                 {content.footer.intro}
               </p>
               <p>{content.footer.disclaimer}</p>
